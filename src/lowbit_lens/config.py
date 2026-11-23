@@ -37,11 +37,32 @@ class TrainCfg:
 
 
 @dataclass(frozen=True)
+class QuantCfg:
+    backend: str
+    calib_images: int
+    calib_seed: int
+    batch_size: int
+
+
+@dataclass(frozen=True)
+class LatencyCfg:
+    runs: int
+    warmup: int
+    rounds: int
+    seeds: tuple[int, ...]
+    diagnostic_threads: tuple[int, ...]
+    diagnostic_rounds: int
+    diagnostic_runs: int
+
+
+@dataclass(frozen=True)
 class Config:
     seeds: tuple[int, ...]
     paths: Paths
     data: DataCfg
     train: TrainCfg
+    quant: QuantCfg
+    latency: LatencyCfg
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -65,4 +86,11 @@ def load_config(path: str | Path = DEFAULT_CONFIG) -> Config:
     seeds = tuple(raw["seeds"])
     if not seeds or len(set(seeds)) != len(seeds):
         raise ValueError(f"seeds must be a non-empty list of distinct ints, got {seeds}")
-    return Config(seeds=seeds, paths=paths, data=data, train=train)
+    quant = QuantCfg(**raw["quant"])
+    lat = raw["latency"]
+    latency = LatencyCfg(
+        runs=lat["runs"], warmup=lat["warmup"], rounds=lat["rounds"],
+        seeds=tuple(lat["seeds"]), diagnostic_threads=tuple(lat["diagnostic_threads"]),
+        diagnostic_rounds=lat["diagnostic_rounds"], diagnostic_runs=lat["diagnostic_runs"],
+    )
+    return Config(seeds=seeds, paths=paths, data=data, train=train, quant=quant, latency=latency)

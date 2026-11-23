@@ -124,3 +124,54 @@ The full list is in `results/tables/duplicate_images.csv`.
 - **Limitation:** only exact copies are detected, not near-duplicates.
 - *Alternatives:* note it and change nothing (no clean score); remove the copies
   from the dataset (cleanest, but not comparable with published numbers).
+
+## D11. INT8 calibration set: 512 training images (agreed)
+
+Activation ranges are measured on 512 training images, drawn at random with a
+fixed seed (`quant.calib_seed`) so every model is calibrated on the same images.
+Test images are never used for calibration. Images are not augmented.
+- *Alternatives:* all ~12,000 training images (slower, usually barely different;
+  possible later sensitivity check); 128 images (risk of an unrepresentative range).
+
+## D12. Rounding recipe: PyTorch's standard onednn recipe (agreed)
+
+Eager-mode post-training static quantization: fuse Conv+BN(+ReLU), attach the
+default `onednn` observers, calibrate, convert. As shipped in PyTorch 2.14.1:
+weights are per-channel symmetric INT8 (`PerChannelMinMaxObserver`); activations
+are per-tensor 8-bit with a range picked from a histogram (`HistogramObserver`,
+no reduced range). The point is to measure what practitioners actually get.
+- *Alternative:* a simplest-possible recipe (per-layer weights, min/max
+  ranges): easier to explain but worse than anything used in practice.
+- FP32 and INT8 are compared on the **CPU**, so quantization is the only
+  difference. FP32 GPU-vs-CPU prediction agreement is recorded as a check.
+
+## D13. CPU speed measurement (revised, agreed)
+
+**Final method:** batch size 1 (one image at a time, like an app) on **1 thread**.
+Each of 5 rounds times every model in FP32 and INT8, alternating which goes
+first; a round's value is the median of 100 runs after 10 warm-up runs. Reported:
+the median over rounds, the lowest and highest round, and the median per-round
+speed-up. Labelled "this laptop, onednn engine, PyTorch 2.14.1" only.
+
+**Why it was revised.** The first plan (1 thread and all threads, 200 runs,
+one pass) gave numbers that did not hold up:
+- ResNet-18 in INT8 with 2, 4 or 8 threads was several times *slower* than on
+  1 thread (repeated over rounds), while its FP32 version sped up normally with
+  more threads. GoogLeNet in INT8 showed this only mildly and MobileNetV2 not at all. It looks
+  like a threading problem in this PyTorch build on Windows, not a property of
+  INT8. It is reported per model in a separate table as a limitation
+  (`cpu_latency_multithread`), never as a speed result.
+- FP32 single-thread time differed between sessions (about 79 vs 122 ms for
+  ResNet-18). The CPU (Intel i5-13420H) mixes fast and slow cores, and Windows
+  decides which one runs the job. Alternating rounds make that drift visible
+  in the reported range instead of hiding it in one number.
+- *Alternatives considered:* spend time fixing multi-threaded INT8 (uncertain,
+  and speed is not the project's main question); drop speed entirely (loses a
+  practical, honestly measurable result).
+
+## D14. Which models are quantized and timed (agreed)
+
+All 9 models (3 architectures x 3 seeds) are quantized and evaluated, which the
+noise-floor comparison needs. Speed is measured for the seed-0 model of each
+architecture only, because all seeds of an architecture have the same structure
+and therefore the same amount of computation.

@@ -25,3 +25,24 @@ lr = 5e-4
 weight_decay = 1e-4
 label_smoothing = 0.0
 amp_dtype = "bfloat16"   # "bfloat16", "float16" or "float32"
+
+[quant]
+# M1: real INT8 post-training quantization (see docs/DECISIONS.md, D11-D14).
+backend = "onednn"        # the only quantized engine in the pinned Windows PyTorch build
+calib_images = 512        # random training images used to measure activation ranges
+calib_seed = 0            # fixed, so every model is calibrated on the same images
+batch_size = 64           # CPU batch size for calibration and test evaluation
+
+[latency]
+# CPU timing: one image at a time on 1 thread (see docs/DECISIONS.md, D13).
+# Each round times every model in FP32 and INT8 (order alternates by round);
+# a round's result is the median of `runs` timed passes after `warmup` passes.
+runs = 100
+warmup = 10
+rounds = 5
+seeds = [0]               # every seed of a model has the same structure, so time one
+# Multi-thread check, reported as a limitation: INT8 with more than one thread
+# was much slower than single-threaded in this PyTorch build on Windows.
+diagnostic_threads = [2, 4, 8]
+diagnostic_rounds = 3
+diagnostic_runs = 50
