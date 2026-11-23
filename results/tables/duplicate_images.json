@@ -1,0 +1,237 @@
+{
+  "dataset": "bloodmnist",
+  "size": 224,
+  "split_sizes": {
+    "train": 11959,
+    "val": 1712,
+    "test": 3421
+  },
+  "duplicate_groups": [
+    [
+      {
+        "split": "train",
+        "index": 120,
+        "label": 3
+      },
+      {
+        "split": "train",
+        "index": 4761,
+        "label": 3
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 810,
+        "label": 0
+      },
+      {
+        "split": "train",
+        "index": 11026,
+        "label": 0
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 1018,
+        "label": 1
+      },
+      {
+        "split": "test",
+        "index": 3126,
+        "label": 6
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 1074,
+        "label": 1
+      },
+      {
+        "split": "train",
+        "index": 3440,
+        "label": 1
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 2835,
+        "label": 1
+      },
+      {
+        "split": "val",
+        "index": 896,
+        "label": 1
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 3052,
+        "label": 0
+      },
+      {
+        "split": "train",
+        "index": 11566,
+        "label": 0
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 3328,
+        "label": 3
+      },
+      {
+        "split": "train",
+        "index": 11575,
+        "label": 3
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 4375,
+        "label": 0
+      },
+      {
+        "split": "test",
+        "index": 3218,
+        "label": 0
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 4995,
+        "label": 0
+      },
+      {
+        "split": "test",
+        "index": 2966,
+        "label": 0
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 5466,
+        "label": 3
+      },
+      {
+        "split": "train",
+        "index": 11856,
+        "label": 3
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 7646,
+        "label": 1
+      },
+      {
+        "split": "test",
+        "index": 1323,
+        "label": 1
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 7953,
+        "label": 1
+      },
+      {
+        "split": "train",
+        "index": 10734,
+        "label": 1
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 8117,
+        "label": 5
+      },
+      {
+        "split": "train",
+        "index": 9084,
+        "label": 5
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 8530,
+        "label": 1
+      },
+      {
+        "split": "val",
+        "index": 956,
+        "label": 1
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 10505,
+        "label": 0
+      },
+      {
+        "split": "test",
+        "index": 2664,
+        "label": 0
+      }
+    ],
+    [
+      {
+        "split": "train",
+        "index": 11443,
+        "label": 0
+      },
+      {
+        "split": "val",
+        "index": 1485,
+        "label": 0
+      }
+    ],
+    [
+      {
+        "split": "val",
+        "index": 1593,
+        "label": 1
+      },
+      {
+        "split": "test",
+        "index": 2491,
+        "label": 1
+      }
+    ]
+  ],
+  "label_conflicts": [
+    [
+      {
+        "split": "train",
+        "index": 1018,
+        "label": 1
+      },
+      {
+        "split": "test",
+        "index": 3126,
+        "label": 6
+      }
+    ]
+  ],
+  "excluded_test_indices": [
+    1323,
+    2491,
+    2664,
+    2966,
+    3126,
+    3218
+  ]
+}

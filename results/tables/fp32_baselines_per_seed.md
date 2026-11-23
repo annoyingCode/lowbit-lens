@@ -1,0 +1,13 @@
+FP32 baselines on BloodMNIST 224px, seeds [0, 1, 2]. Test accuracy is for the checkpoint with the best validation accuracy; hyperparameters were not tuned (see docs/DECISIONS.md). test_acc uses the official test set; test_acc_clean leaves out the 6 test images that are exact copies of training or validation images (results/tables/duplicate_images.csv).
+
+| model | seed | params_M | val_acc | test_acc | test_acc_clean | best_epoch | train_min |
+|---|---|---|---|---|---|---|---|
+| resnet18 | 0 | 11.18 | 0.9947 | 0.9930 | 0.9933 | 11/15 | 5.8 |
+| resnet18 | 1 | 11.18 | 0.9936 | 0.9936 | 0.9939 | 13/15 | 5.7 |
+| resnet18 | 2 | 11.18 | 0.9924 | 0.9904 | 0.9906 | 8/15 | 5.8 |
+| mobilenet_v2 | 0 | 2.23 | 0.9942 | 0.9924 | 0.9927 | 12/15 | 8.4 |
+| mobilenet_v2 | 1 | 2.23 | 0.9942 | 0.9909 | 0.9912 | 10/15 | 8.3 |
+| mobilenet_v2 | 2 | 2.23 | 0.9942 | 0.9918 | 0.9921 | 11/15 | 8.9 |
+| googlenet | 0 | 5.61 | 0.9947 | 0.9915 | 0.9918 | 11/15 | 11.7 |
+| googlenet | 1 | 5.61 | 0.9953 | 0.9933 | 0.9936 | 13/15 | 11.6 |
+| googlenet | 2 | 5.61 | 0.9936 | 0.9921 | 0.9924 | 11/15 | 12.9 |

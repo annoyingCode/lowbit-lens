@@ -1,0 +1,27 @@
+# Single source of truth for every experiment. Scripts read this file;
+# command-line flags only select what to run, they do not change settings.
+
+# Every model is trained once per seed. Three seeds give a spread for each result
+# and a "noise floor": how much two FP32 models that differ only in their seed
+# already disagree, which quantization effects are compared against.
+seeds = [0, 1, 2]
+
+[paths]
+data_dir = "data"        # MedMNIST downloads (gitignored)
+runs_dir = "runs"        # checkpoints and logs (gitignored)
+results_dir = "results"  # tables and figures (committed)
+
+[data]
+dataset = "bloodmnist"
+size = 224               # 28, 64, 128 or 224; see docs/MILESTONES.md for why 224
+num_classes = 8
+
+[train]
+models = ["resnet18", "mobilenet_v2", "googlenet"]
+epochs = 15
+batch_size = 64
+eval_batch_size = 256
+lr = 5e-4
+weight_decay = 1e-4
+label_smoothing = 0.0
+amp_dtype = "bfloat16"   # "bfloat16", "float16" or "float32"

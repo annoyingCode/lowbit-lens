@@ -1,0 +1,44 @@
+[project]
+name = "lowbit-lens"
+version = "0.1.0"
+description = "Does a quantized CNN still look at the same evidence? Grad-CAM under low-bit quantization."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Abdul Wahab Khan" }]
+dependencies = [
+    # Pinned exactly: eager-mode INT8 quantization (torch.ao.quantization) and
+    # torchvision.models.quantization are verified present in these versions.
+    "torch==2.14.1",
+    "torchvision==0.29.1",
+    "medmnist==3.0.2",
+    "numpy>=2.0",
+    "scipy>=1.14",
+    "scikit-image>=0.24",
+    "pandas>=2.2",
+    "matplotlib>=3.9",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lowbit_lens"]
+
+# PyTorch CUDA 13.0 builds come from PyTorch's own package index.
+[tool.uv.sources]
+torch = { index = "pytorch-cu130" }
+torchvision = { index = "pytorch-cu130" }
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
