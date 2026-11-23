@@ -46,3 +46,9 @@ seeds = [0]               # every seed of a model has the same structure, so tim
 diagnostic_threads = [2, 4, 8]
 diagnostic_rounds = 3
 diagnostic_runs = 50
+
+[fakequant]
+# M2: simulated quantization sweep (see docs/DECISIONS.md, D15-D18).
+bits = [8, 6, 4, 2]
+sweeps = ["both", "weights"]   # both = weights and activations at b bits; weights = only weights
+edge_bits = 8                  # first layer, last layer and the input stay at 8 bits

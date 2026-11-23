@@ -13,8 +13,9 @@ explanations and whether those explanations stay *faithful* to the model. It doe
 not test whether any model looks at the medically correct evidence. Each design
 choice and its alternatives are recorded in [docs/DECISIONS.md](docs/DECISIONS.md).
 
-> **Status: work in progress.** Done: FP32 baselines (M0) and real INT8
-> quantization (M1). Next: the bit-width sweep (M2), then the explanations.
+> **Status: work in progress.** Done: FP32 baselines (M0), real INT8
+> quantization (M1) and the simulated 8/6/4/2-bit sweep (M2). Next: the
+> explanations (Grad-CAM, Score-CAM) and the sanity check (M3).
 > Every number here comes from a table the code generates; see
 > [docs/MILESTONES.md](docs/MILESTONES.md) for the plan.
 
@@ -47,6 +48,13 @@ by the code):
   accuracy, agreement with FP32 predictions and model size. On this dataset
   INT8 changes very few predictions; whether it changes the explanations is
   what the next milestones test.
+- **Bit-width sweep (simulated quantization):** [bitwidth_sweep.md](results/tables/bitwidth_sweep.md):
+  accuracy and changed predictions at 8, 6, 4 and 2 bits, for weights and
+  activations together and for weights only. The simulator's 8-bit predictions
+  were checked against the real INT8 models
+  ([fake_vs_real_int8.md](results/tables/fake_vs_real_int8.md)), and the
+  activation range search was tested before choosing it
+  ([observer_check.md](results/tables/observer_check.md)).
 - **CPU speed (one laptop only):** [cpu_latency.md](results/tables/cpu_latency.md)
   for 1 thread, measured in alternating rounds, and
   [cpu_latency_multithread.md](results/tables/cpu_latency_multithread.md), a
@@ -101,6 +109,7 @@ src/lowbit_lens/
   audit.py               duplicate-image check across splits
   predict.py             per-image test predictions for finished runs
   quantize.py            real INT8 quantization, size and CPU timing (M1)
+  fakequant.py           simulated 8/6/4/2-bit quantization sweep (M2)
   report.py              tables built from run outputs
   reproduce.py           the one command that regenerates everything
 tests/                   CPU unit tests
@@ -120,6 +129,19 @@ docs/DECISIONS.md        every design choice, with reasons and alternatives
 - Jacob et al., *Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference*, CVPR 2018.
 - Yang et al., *MedMNIST v2: A Large-Scale Lightweight Benchmark for 2D and 3D Biomedical Image Classification*, Scientific Data 2023.
 - Acevedo et al., *A dataset of microscopic peripheral blood cell images for development of automatic recognition systems*, Data in Brief 2020 (source of BloodMNIST).
+
+## How this project was built
+
+I used Claude (Anthropic's AI assistant) as a coding and research assistant
+throughout this project. Claude wrote most of the code, ran the experiments
+and drafted the documentation. I set the research question and study design,
+discussed and approved every design choice (each one is recorded with its
+alternatives in [docs/DECISIONS.md](docs/DECISIONS.md)), questioned results
+that looked wrong, and decided what the project does and does not claim.
+Commits made with Claude's help are marked `Co-Authored-By: Claude`.
+
+Mistakes caught along the way are recorded in the decision log rather than
+hidden (see D13 and D16).
 
 ## License
 

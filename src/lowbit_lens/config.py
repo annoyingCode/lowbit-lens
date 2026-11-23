@@ -56,6 +56,13 @@ class LatencyCfg:
 
 
 @dataclass(frozen=True)
+class FakeQuantCfg:
+    bits: tuple[int, ...]
+    sweeps: tuple[str, ...]
+    edge_bits: int
+
+
+@dataclass(frozen=True)
 class Config:
     seeds: tuple[int, ...]
     paths: Paths
@@ -63,6 +70,7 @@ class Config:
     train: TrainCfg
     quant: QuantCfg
     latency: LatencyCfg
+    fakequant: FakeQuantCfg
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -93,4 +101,9 @@ def load_config(path: str | Path = DEFAULT_CONFIG) -> Config:
         seeds=tuple(lat["seeds"]), diagnostic_threads=tuple(lat["diagnostic_threads"]),
         diagnostic_rounds=lat["diagnostic_rounds"], diagnostic_runs=lat["diagnostic_runs"],
     )
-    return Config(seeds=seeds, paths=paths, data=data, train=train, quant=quant, latency=latency)
+    fq = raw["fakequant"]
+    fakequant = FakeQuantCfg(bits=tuple(fq["bits"]), sweeps=tuple(fq["sweeps"]), edge_bits=fq["edge_bits"])
+    if not set(fakequant.sweeps) <= {"both", "weights"} or not all(2 <= b <= 8 for b in fakequant.bits):
+        raise ValueError(f"bad [fakequant] settings: {fakequant}")
+    return Config(seeds=seeds, paths=paths, data=data, train=train, quant=quant,
+                  latency=latency, fakequant=fakequant)

@@ -1,0 +1,10 @@
+model,seed,same_prediction_as_real_int8,images_that_differ
+resnet18,0,1.0000,0
+resnet18,1,0.9997,1
+resnet18,2,1.0000,0
+mobilenet_v2,0,0.9988,4
+mobilenet_v2,1,0.9985,5
+mobilenet_v2,2,0.9994,2
+googlenet,0,1.0000,0
+googlenet,1,1.0000,0
+googlenet,2,1.0000,0

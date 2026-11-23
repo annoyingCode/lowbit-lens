@@ -8,14 +8,15 @@ Stages so far (more are added as milestones land, see docs/MILESTONES.md):
     2. data audit: duplicate images  -> results/tables/duplicate_images.{json,csv}
     3. per-image test predictions    -> runs/fp32/*/test_logits.npy (if missing)
     4. real INT8 quantization + CPU timing -> runs/int8/  (milestone M1)
-    5. tables                        -> results/tables/*.{csv,md}
+    5. simulated 8/6/4/2-bit sweep   -> runs/fakequant/   (milestone M2)
+    6. tables                        -> results/tables/*.{csv,md}
 """
 
 from __future__ import annotations
 
 import argparse
 
-from . import audit, predict, quantize, report, train
+from . import audit, fakequant, predict, quantize, report, train
 from .config import DEFAULT_CONFIG, load_config
 
 
@@ -31,20 +32,22 @@ def main(argv: list[str] | None = None) -> None:
         if args.force or not (train.run_dir(cfg, m, s) / "metrics.json").exists()
     ]
     if todo:
-        print("[1/5] training: " + ", ".join(f"{m} seed {s}" for m, s in todo))
+        print("[1/6] training: " + ", ".join(f"{m} seed {s}" for m, s in todo))
         for s in dict.fromkeys(s for _, s in todo):  # one call per seed, in order
             models = [m for m, s2 in todo if s2 == s]
             train.main(["--config", args.config, "--models", *models, "--seeds", str(s)])
     else:
-        print("[1/5] training: all FP32 runs present, skipping (use --force to retrain)")
+        print("[1/6] training: all FP32 runs present, skipping (use --force to retrain)")
 
-    print("[2/5] data audit")
+    print("[2/6] data audit")
     audit.main(["--config", args.config])
-    print("[3/5] test predictions")
+    print("[3/6] test predictions")
     predict.main(["--config", args.config])
-    print("[4/5] INT8 quantization and CPU timing")
+    print("[4/6] INT8 quantization and CPU timing")
     quantize.main(["--config", args.config] + (["--force"] if args.force else []))
-    print("[5/5] tables")
+    print("[5/6] simulated bit-width sweep")
+    fakequant.main(["--config", args.config, "--observer-check"] + (["--force"] if args.force else []))
+    print("[6/6] tables")
     report.main(["--config", args.config])
 
 

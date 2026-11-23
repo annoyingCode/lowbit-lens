@@ -190,6 +190,52 @@ def latency_tables(cfg: Config) -> tuple[list[dict], list[dict], dict] | None:
     return main, diag, data["setup"]
 
 
+def fakequant_tables(cfg: Config) -> tuple[list[dict], list[dict]] | None:
+    """Bit-width sweep (simulated quantization) and the fake-vs-real INT8 check."""
+    from .fakequant import fq_dir, settings
+
+    sets = settings(cfg)
+    keys = [(m, s, sw, w, a) for (sw, w, a) in sets for m in cfg.train.models for s in cfg.seeds]
+    if not all((fq_dir(cfg, m, s, w, a) / "metrics.json").exists() for m, s, _, w, a in keys):
+        return None
+    labels = load_labels(cfg.data.dataset, "test", cfg.data.size, cfg.paths.data_dir)
+    keep = np.ones(len(labels), dtype=bool)
+    keep[load_excluded_test_indices(cfg)] = False
+    ms = {}
+    for m, s, sw, w, a in keys:
+        r = json.loads((fq_dir(cfg, m, s, w, a) / "metrics.json").read_text())
+        pred = np.load(fq_dir(cfg, m, s, w, a) / "test_logits.npy").argmax(1)
+        if int((pred == labels).sum()) != round(r["test_acc"] * len(labels)):
+            raise RuntimeError(f"{m} seed {s} W{w}A{a}: logits disagree with metrics.json")
+        r["test_acc_clean"] = float((pred[keep] == labels[keep]).mean())
+        ms[m, s, w, a] = r
+
+    sweep_rows = []
+    for name in cfg.train.models:
+        fp = [ms[name, s, 8, 8]["fp32_test_acc"] for s in cfg.seeds]
+        sweep_rows.append({"model": name, "setting": "FP32", "sweep": "-",
+                           "acc": mean_sd(fp), "acc_clean": "-", "same_prediction": "-",
+                           "changed_of_3421": "-"})
+        for sw, w, a in sets:
+            rs = [ms[name, s, w, a] for s in cfg.seeds]
+            sweep_rows.append({
+                "model": name,
+                "setting": f"W{w}A{a}",
+                "sweep": "both + weights" if (w, a) == (8, 8) else sw,
+                "acc": mean_sd([r["test_acc"] for r in rs]),
+                "acc_clean": mean_sd([r["test_acc_clean"] for r in rs]),
+                "same_prediction": mean_sd([r["agreement_with_fp32"] for r in rs]),
+                "changed_of_3421": " / ".join(str(r["flips_total"]) for r in rs),
+            })
+    check_rows = [
+        {"model": name, "seed": s,
+         "same_prediction_as_real_int8": f"{ms[name, s, 8, 8]['agreement_with_real_int8']:.4f}",
+         "images_that_differ": ms[name, s, 8, 8]["differs_from_real_int8"]}
+        for name in cfg.train.models for s in cfg.seeds
+    ]
+    return sweep_rows, check_rows
+
+
 def write_table(rows: list[dict], stem: str, cfg: Config, note: str) -> None:
     out = cfg.paths.results_dir / "tables"
     out.mkdir(parents=True, exist_ok=True)
@@ -240,6 +286,43 @@ def main(argv: list[str] | None = None) -> None:
         write_table(summary8, "int8_ptq", cfg, note8 + " Values are mean ± sample SD over seeds; "
                     "changed_of_3421 lists seeds " + ", ".join(map(str, cfg.seeds)) + ".")
         write_table(per_seed8, "int8_ptq_per_seed", cfg, note8)
+
+    fq = fakequant_tables(cfg)
+    if fq is None:
+        print("fake-quantization results not complete yet; skipping M2 tables")
+    else:
+        sweep_rows, check_rows = fq
+        write_table(
+            sweep_rows, "bitwidth_sweep", cfg,
+            "Simulated (fake) quantization, evaluated on the GPU on the official test set "
+            f"(3421 images). W = weight bits, A = activation bits; first layer, last layer and "
+            f"input stay at {cfg.fakequant.edge_bits} bits. Sweep 'both' lowers weights and "
+            "activations together; sweep 'weights' lowers only the weights. Same 512 "
+            "calibration images and the same standard recipe as the real INT8 models (D16). "
+            "acc_clean leaves out the "
+            f"{n_excluded} duplicated test images. same_prediction = share of test images "
+            "with the same predicted class as the FP32 model. Values are mean ± sample SD over "
+            "seeds; changed_of_3421 lists seeds " + ", ".join(map(str, cfg.seeds)) + ".",
+        )
+        write_table(
+            check_rows, "fake_vs_real_int8", cfg,
+            "Faithfulness check of the simulator: predictions of the simulated W8A8 model "
+            "(GPU) vs the real INT8 model from M1 (CPU), on the 3421 test images.",
+        )
+
+    obs_path = cfg.paths.runs_dir / "fakequant" / "observer_check.json"
+    if obs_path.exists():
+        obs = json.loads(obs_path.read_text())
+        write_table(
+            [{"model": r["model"], "seed": r["seed"], "setting": r["setting"],
+              "stock_acc": f"{r['stock_acc']:.4f}", "levels_aware_acc": f"{r['levels_aware_acc']:.4f}"}
+             for r in obs],
+            "observer_check", cfg,
+            "Activation range search, tested before choosing (D16): PyTorch's stock "
+            "HistogramObserver (always assumes 256 levels) vs a variant told the real number of "
+            "levels. Test accuracy, seed-0 models. The stock observer was equal or better, so "
+            "all results use it.",
+        )
 
     lat = latency_tables(cfg)
     if lat is None:

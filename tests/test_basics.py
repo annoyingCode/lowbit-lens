@@ -77,3 +77,37 @@ def test_int8_quantization_runs_and_repeats(name):
     skeleton.load_state_dict(a.state_dict())  # saved INT8 weights load into the skeleton
     with torch.no_grad():
         assert torch.equal(skeleton(x), a(x))
+
+
+def test_levels_aware_observer_uses_real_number_of_levels():
+    from lowbit_lens.fakequant import LevelsAwareHistogramObserver
+
+    assert LevelsAwareHistogramObserver(quant_min=0, quant_max=15).dst_nbins == 16
+    assert LevelsAwareHistogramObserver().dst_nbins == 256  # 8 bits: same as PyTorch's default
+
+
+@pytest.mark.parametrize("name", MODEL_NAMES)
+def test_fake_quant_grid_and_gradients(name):
+    from lowbit_lens.fakequant import EDGE_LAYERS, build_fake_quant
+
+    torch.manual_seed(0)
+    model = build_model(name, num_classes=8, pretrained=False).eval()
+    calib = Split(torch.randint(0, 256, (8, 3, 64, 64), dtype=torch.uint8), torch.zeros(8, dtype=torch.long))
+    fq = build_fake_quant(model, name, calib, weight_bits=4, act_bits=4, batch_size=4)
+    for layer in EDGE_LAYERS[name]:
+        fq.get_submodule(layer)  # edge layers exist under these names
+    # a 4-bit layer's weights sit on at most 16 levels per output channel
+    convs = [m for n, m in fq.named_modules() if hasattr(m, "weight_fake_quant") and n not in EDGE_LAYERS[name]]
+    w = convs[len(convs) // 2]
+    wq = w.weight_fake_quant(w.weight).detach()
+    assert max(len(torch.unique(wq[c])) for c in range(wq.shape[0])) <= 16
+    # Gradients reach the input (needed for Grad-CAM). The input must look like the
+    # calibration images, since values clipped at the grid's edge pass no gradient.
+    # A randomly initialised MobileNetV2 has a vanishing gradient even in FP32
+    # (~1e-8), which rounding then removes, so it is skipped here; the trained
+    # MobileNetV2 checkpoints do have gradients at 8, 4 and 2 bits.
+    if name != "mobilenet_v2":
+        x, _ = next(iterate_batches(calib, 1, torch.device("cpu")))
+        x.requires_grad_(True)
+        fq(x)[0].max().backward()
+        assert x.grad is not None and x.grad.abs().sum() > 0

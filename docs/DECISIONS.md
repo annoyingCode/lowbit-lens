@@ -175,3 +175,49 @@ All 9 models (3 architectures x 3 seeds) are quantized and evaluated, which the
 noise-floor comparison needs. Speed is measured for the seed-0 model of each
 architecture only, because all seeds of an architecture have the same structure
 and therefore the same amount of computation.
+
+## D15. Simulated ("fake") quantization with PyTorch's built-in tools (agreed)
+
+PyTorch can only run real 8-bit models, so 6-, 4- and 2-bit models are simulated:
+values stay floats but are snapped to a b-bit grid before use. Built with
+PyTorch's own `FakeQuantize` modules and the same recipe as the real INT8 models
+(same fusion, same 512 calibration images, per-channel symmetric weights,
+histogram-based activation ranges), so only the number of levels changes.
+- Gradients pass through the rounding step unchanged and are zeroed where a
+  value was clipped (PyTorch's standard "straight-through" rule). This is what
+  lets Grad-CAM run on these models.
+- **Faithfulness check:** the simulated W8A8 model's predictions are compared
+  with the real INT8 model from M1 on all test images (`fake_vs_real_int8`).
+- *Alternative:* a small custom simulator. More transparent line by line, but it
+  would differ from PyTorch's real INT8 recipe and weaken that check.
+
+## D16. Activation range search: PyTorch's standard observer (agreed, tested)
+
+PyTorch's `HistogramObserver` always picks its clipping range as if the grid
+had 256 levels, even when it has 16 or 4. A "levels-aware" variant that
+optimises for the real number of levels was written and **tested before
+choosing**: it was never better and was clearly worse in one case (ResNet-18
+W4A4: 96.7% vs 98.2% with the stock observer). The likely reason is that it
+clips large activations more, and those rare large values matter for the
+decision. All results use the standard observer. The comparison is regenerated
+by `python -m lowbit_lens.fakequant --observer-check` (`observer_check` table).
+- Note for honesty: the levels-aware variant was first proposed as a fix on
+  theoretical grounds; the data showed the reasoning was wrong, so it was dropped.
+
+## D17. Two sweeps: weights + activations, and weights only (agreed)
+
+- Sweep "both": weights and activations at the same bit-width (W8A8, W6A6,
+  W4A4, W2A2).
+- Sweep "weights": only the weights are lowered, activations stay 8-bit (W6A8,
+  W4A8, W2A8), a common real-world setup. W8A8 belongs to both sweeps.
+- Accuracy is measured for both (cheap). Which sweep the heatmap study (M3-M4)
+  uses is decided after seeing these results.
+
+## D18. First layer, last layer and input stay at 8 bits (agreed)
+
+In every setting the input quantization, the first layer (sees raw pixels) and
+the last layer (makes the decision) stay at 8 bits, following common practice
+in low-bit quantization research. The layer names are fixed per model and a
+test checks they are the first and last weighted layers.
+- *Alternative:* every layer at the same bit-width: one simple rule, but more
+  models collapse completely, leaving little to explain.
